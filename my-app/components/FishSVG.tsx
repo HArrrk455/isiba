@@ -18,13 +18,13 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
 
   // ★新しいシンプルな魚のシルエットパスデータ★
   // M 始点, C 制御点1, 制御点2, 終点
-  const simpleFishSilhouettePath = `
+  const fish1 = `
     M 10 50 
-    C 30 20, 120 20, 140 50 
-    C 120 80, 30 80, 10 50 
-    M 140 50 
-    C 160 40, 180 30, 190 50 
-    C 180 70, 160 60, 140 50 Z
+    C 80 -10, 150 40, 150 50     
+    C 95 100, 50 80, 10 50       
+    M 130 50 
+    C 145 60, 215 -40, 170 50 
+    C 170 60, 205 120, 140 50 Z
   `;
 
   // シンプルなパスに合わせて viewBox を設定 (幅200, 高さ100)
@@ -55,9 +55,9 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
       {/* 魚のシルエット全体: グラデーションを適用 */}
       <path 
         fill="url(#fishGradient)" // グラデーションを適用
-        stroke="black"
+        stroke="none"
         strokeWidth="2" // シンプルな viewBox に合わせて線の太さも細くします
-        d={simpleFishSilhouettePath}
+        d={fish1}
         id="fish-silhouette"
       />
     </svg>
