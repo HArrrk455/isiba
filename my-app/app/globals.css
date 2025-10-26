@@ -2,24 +2,25 @@
 /* 1. 水槽の基本スタイル */
 /* ======================== */
 .aquarium-container {
-  width: 100%;
-  height: 400px; /* 水槽の高さ */
-  background: linear-gradient(to bottom, #7fcde5, #2f94c5); /* 青いグラデーション */
-  border: 10px solid #2a2a2a;
-  border-radius: 15px;
+  width: 430px;
+  height: 896px;
+  /* 水槽の高さ */
+  background: linear-gradient(to bottom, #4F5E92, #191831);
+  /* 青いグラデーション */
   position: relative;
-  overflow: hidden; /* 魚が外に出るのを防ぐ */
+  overflow: hidden;
+  /* 魚が外に出るのを防ぐ */
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .placeholder-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 1.25rem;
-    text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 1.25rem;
+  text-align: center;
 }
 
 /* ======================== */
@@ -31,24 +32,30 @@
   position: absolute;
   top: 50%;
   left: 0;
-  transform: translateY(-50%); /* 垂直方向の中央揃え */
-  width: 150px; /* 魚のサイズ（viewBoxに依存） */
+  transform: translateY(-50%);
+  /* 垂直方向の中央揃え */
+  width: 150px;
+  /* 魚のサイズ（viewBoxに依存） */
   transition: opacity 0.5s ease-in-out;
 }
 
 /* 魚を左右に泳がせるキーフレーム */
 @keyframes swim {
   0% {
-    left: 0%; /* 左端 */
+    left: 0%;
+    /* 左端 */
   }
+
   100% {
-    left: calc(100% - 150px); /* 右端 (水槽幅 - 魚の幅) */
+    left: calc(100% - 150px);
+    /* 右端 (水槽幅 - 魚の幅) */
   }
 }
 
 /* 泳ぐアニメーションを適用 */
 .fish-wrapper.animate-swim {
-  animation: swim 10s linear infinite alternate; /* 10秒かけて泳ぎ、無限に交互に繰り返す */
+  animation: swim 10s linear infinite alternate;
+  /* 10秒かけて泳ぎ、無限に交互に繰り返す */
 }
 
 /* 魚を反転させるクラス（CSS transform: scaleX(-1) を使用） */
@@ -57,6 +64,7 @@
   /* translateX は animation: swim の left プロパティと干渉しないよう注意 */
   transform: translateY(-50%) scaleX(-1);
 }
+
 .fish-wrapper:not(.flipped) {
   /* 反転していないときも transform を適用して一貫性を保つ */
   transform: translateY(-50%) scaleX(1);
