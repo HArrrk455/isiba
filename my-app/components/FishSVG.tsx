@@ -13,21 +13,28 @@ const toRgbString = (color: RGBColor): string =>
 const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
   // 抽出された3色を取得。
   const gradColor1 = colors[0] ? toRgbString(colors[0]) : 'rgb(0, 150, 250)'; // 頭部の色
-  const gradColor2 = colors[1] ? toRgbString(colors[1]) : 'rgb(50, 200, 100)'; // 胴体の色
+  const gradColor2 = colors[1] ? toRgbString(colors[1]) : 'rgb(50, 200, 100)'; // 胴体の色 (ヒレの単色も兼ねる)
   const gradColor3 = colors[2] ? toRgbString(colors[2]) : 'rgb(255, 150, 0)';  // 尾びれの色
 
-  // ★新しいシンプルな魚のシルエットパスデータ★
-  // M 始点, C 制御点1, 制御点2, 終点
-  const simpleFishSilhouettePath = `
+  // 1. 魚の胴体（尾びれの付け根まで）
+  const bodyPath = `
     M 10 50 
     C 30 20, 120 20, 140 50 
-    C 120 80, 30 80, 10 50 
-    M 140 50 
-    C 160 40, 180 30, 190 50 
-    C 180 70, 160 60, 140 50 Z
+    C 120 80, 30 80, 10 50 Z
+  `;
+  
+  // 2. 尾びれ（三角形）
+  const tailFinPath = `
+    M 140 50
+    L 160 40
+    L 190 50
+    L 160 60
+    Z
   `;
 
-  // シンプルなパスに合わせて viewBox を設定 (幅200, 高さ100)
+ 
+
+  // パスデータに合わせて viewBox を設定
   const viewBox = "0 0 200 100";
 
 
@@ -41,25 +48,36 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
       style={{ overflow: 'visible' }} 
     >
       <defs>
-        {/* 線形グラデーションの定義: 左から右へ色を変化させる (頭から尾) */}
-        <linearGradient id="fishGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          {/* Color 1: 頭部 (左) */}
+        {/* 線形グラデーションの定義: 左から右へ色を変化させる (胴体用) */}
+        <linearGradient id="fishBodyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          {/* 胴体のグラデーションは Color 1 (頭) と Color 2 (胴体) を使用 */}
           <stop offset="0%" style={{ stopColor: gradColor1, stopOpacity: 1 }} />
-          {/* Color 2: 胴体 (中央) */}
-          <stop offset="50%" style={{ stopColor: gradColor2, stopOpacity: 1 }} />
-          {/* Color 3: 尾びれ (右) */}
+          <stop offset="100%" style={{ stopColor: gradColor2, stopOpacity: 1 }} />
+        </linearGradient>
+        
+        {/* 尾びれ用のグラデーション (Color 2 と Color 3 の間で変化させる) */}
+        <linearGradient id="tailFinGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style={{ stopColor: gradColor2, stopOpacity: 1 }} />
           <stop offset="100%" style={{ stopColor: gradColor3, stopOpacity: 1 }} />
         </linearGradient>
       </defs>
       
-      {/* 魚のシルエット全体: グラデーションを適用 */}
+      {/* 1. 胴体（グラデーション適用） */}
       <path 
-        fill="url(#fishGradient)" // グラデーションを適用
+        fill="url(#fishBodyGradient)" // 胴体グラデーションを適用
         stroke="black"
-        strokeWidth="2" // シンプルな viewBox に合わせて線の太さも細くします
-        d={simpleFishSilhouettePath}
-        id="fish-silhouette"
+        strokeWidth="2" 
+        d={bodyPath}
       />
+
+      {/* 2. 尾びれ（尾びれ用グラデーション適用） */}
+      <path 
+        fill="url(#tailFinGradient)" // 尾びれグラデーションを適用
+        stroke="black"
+        strokeWidth="2" 
+        d={tailFinPath}
+      />
+    
     </svg>
   );
 };
