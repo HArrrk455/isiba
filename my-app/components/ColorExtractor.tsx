@@ -1,14 +1,12 @@
 // components/ColorExtractor.tsx
-'use client'; // 状態とuseEffectを使用するためクライアントコンポーネントにする
+'use client';
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import FishSVG, { RGBColor } from './FishSVG';
+import { RGBColor } from './FishSVG'; 
 
 // K-means法などに使う距離関数（ユークリッド距離の二乗）
 const abs = (color1: number[], color2: number[]): number =>
-  (color1[0] - color2[0]) ** 2 +
-  (color1[1] - color2[1]) ** 2 +
-  (color1[2] - color2[2]) ** 2;
+  (color1[0] - color2[0]) ** 2 + (color1[1] - color2[1]) ** 2 + (color1[2] - color2[2]) ** 2;
 
 // RGBをHSVに変換し、明るさ＋彩度を返す関数（ソート用）
 const getHsvScore = (r: number, g: number, b: number): number => {
@@ -18,36 +16,34 @@ const getHsvScore = (r: number, g: number, b: number): number => {
   return (v / 255) + s; // 明度(V)と彩度(S)の合計をスコアとする
 };
 
-// RGBオブジェクトをCSSのrgb()文字列に変換するヘルパー関数 (再利用)
-const toRgbString = (color: RGBColor): string => 
-  `rgb(${color.r}, ${color.g}, ${color.b})`;
-
 export type ImageColorData = {
   image: Blob | null;
   colors: RGBColor[] | null;
 }
 
-const ColorExtractor: React.FC = () => {
+interface ColorExtractorProps { 
+  // 抽出した色と元の画像URLを親に渡す
+  onExtractColors: (colors: RGBColor[], originalImageUrl: string | null) => void; 
+}
+
+const ColorExtractor: React.FC<ColorExtractorProps> = ({ onExtractColors }) => {
   const [data, setData] = useState<ImageColorData>({ image: null, colors: null });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
-  // 画像から色を抽出するメインロジック
-  const extractColors = useCallback(async (src: ImageData) => {
+  
+  // 画像から色を抽出するメインロジック (K-means法)
+  const extractColors = useCallback(async (src: ImageData, currentImageUrl: string | null) => {
     setLoading(true);
-    const pixels = [];
+    const pixels: number[][] = [];
     // 4ピクセルごとのサンプリングでピクセルデータを収集
     for (let x = 0; x < src.width; x += 4) {
       for (let y = 0; y < src.height; y += 4) {
         const i = (y * src.width + x) * 4;
-        const r = src.data[i + 0];
-        const g = src.data[i + 1];
-        const b = src.data[i + 2];
-        pixels.push([r, g, b]);
+        pixels.push([src.data[i + 0], src.data[i + 1], src.data[i + 2]]);
       }
     }
 
-    // K-means初期化: ランダムに12個の代表色を選択
+    // K-means初期化
     let chosenPixels: number[][] = [];
     const candidates = [...pixels];
     for (let i = 0; i < 12 && candidates.length > 0; i++) {
@@ -56,9 +52,10 @@ const ColorExtractor: React.FC = () => {
       candidates.splice(arrayIndex, 1);
     }
 
-    // K-means法の反復処理 (100回)
+// K-means法の反復処理 (100回)
     for (let loop = 0; loop < 100; loop++) {
-      const groupIndexes: number[] = [];
+      // 1. 各ピクセルを最も近いセントロイドに割り当て
+      const groupIndexes: number[] = []; // ★修正: ループ内で groupIndexes を宣言
       for (const pixel of pixels) {
         const distances = [];
         for (const chosenPixel of chosenPixels) {
@@ -67,68 +64,79 @@ const ColorExtractor: React.FC = () => {
         groupIndexes.push(distances.indexOf(Math.min(...distances)));
       }
 
-      const groupIndexCount = [...Array(chosenPixels.length)].map(
-        (_, i) => groupIndexes.filter((x) => x === i).length
-      );
-
-      let newChosenPixels = [...Array(chosenPixels.length)].map((_) => [0, 0, 0]);
+      // 2. 新しいセントロイドの計算
+      let newChosenPixels: number[][] = [...Array(chosenPixels.length)].map((_) => [0, 0, 0]);
+      let assignedCount: number[] = [...Array(chosenPixels.length)].fill(0);
 
       for (let i = 0; i < pixels.length; i++) {
-        const groupIndex = groupIndexes[i];
-        if (groupIndexCount[groupIndex] > 0) {
-          newChosenPixels[groupIndex][0] += pixels[i][0] / groupIndexCount[groupIndex];
-          newChosenPixels[groupIndex][1] += pixels[i][1] / groupIndexCount[groupIndex];
-          newChosenPixels[groupIndex][2] += pixels[i][2] / groupIndexCount[groupIndex];
+        const groupIndex = groupIndexes[i]; // ★修正: groupIndexes から groupIndex を取得
+        
+        // 合計値を計算
+        newChosenPixels[groupIndex][0] += pixels[i][0];
+        newChosenPixels[groupIndex][1] += pixels[i][1];
+        newChosenPixels[groupIndex][2] += pixels[i][2];
+        assignedCount[groupIndex]++;
+      }
+      
+      let nextChosenPixels: number[][] = [];
+
+      for (let i = 0; i < chosenPixels.length; i++) {
+        if (assignedCount[i] > 0) {
+          // 割り当てがあった場合: 平均を計算
+          const newR = newChosenPixels[i][0] / assignedCount[i];
+          const newG = newChosenPixels[i][1] / assignedCount[i];
+          const newB = newChosenPixels[i][2] / assignedCount[i];
+          nextChosenPixels.push([newR, newG, newB]);
+        } else {
+          // 割り当てがなかった場合: 前回のセントロイドを維持
+          nextChosenPixels.push(chosenPixels[i]);
         }
       }
-      chosenPixels = newChosenPixels;
+      chosenPixels = nextChosenPixels; // 次のループのために更新
     }
 
     // 明るさ+彩度のスコアでソートし、上位3色を選択
-    const finalColors: RGBColor[] = chosenPixels
+    const finalColors: RGBColor[] = chosenPixels 
       .filter(color => color.every(c => !isNaN(c))) 
-      .sort((a, b) => {
-        const scoreA = getHsvScore(a[0], a[1], a[2]);
-        const scoreB = getHsvScore(b[0], b[1], b[2]);
-        return scoreB - scoreA;
-      })
+      .sort((a, b) => getHsvScore(b[0], b[1], b[2]) - getHsvScore(a[0], a[1], a[2]))
       .slice(0, 3)
-      .map((color) => ({
-        r: Math.round(color[0]),
-        g: Math.round(color[1]),
-        b: Math.round(color[2]),
-      }));
+      .map((color) => ({ r: Math.round(color[0]), g: Math.round(color[1]), b: Math.round(color[2]), }));
       
-    setData(prev => ({ ...prev, colors: finalColors }));
+    // 抽出した色とURLを親コンポーネントに渡す
+    if (finalColors.length >= 3) {
+      onExtractColors(finalColors, currentImageUrl); 
+    }
+
     setLoading(false);
-  }, []);
+    // 処理完了後、状態をリセットし、useEffectのクリーンアップをトリガーする
+    setData({ image: null, colors: null }); 
+  }, [onExtractColors]);
 
   // data.image が更新されたときに色抽出プロセスを実行
   useEffect(() => {
+    let urlToRevoke: string | null = null;
     if (data.image) {
       const image = document.createElement('img');
+      urlToRevoke = URL.createObjectURL(data.image);
+      setImageUrl(urlToRevoke); 
+      image.src = urlToRevoke;
       image.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = image.width;
         canvas.height = image.height;
         const context = canvas.getContext('2d');
-        if (!context) return;
-
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        extractColors(context.getImageData(0, 0, canvas.width, canvas.height));
+        if (!context) { console.error('Canvas context not available.'); return; }
+        // extractColors 呼び出し時に現在の Blob URL を渡す
+        extractColors(context.getImageData(0, 0, canvas.width, canvas.height), urlToRevoke); 
         canvas.remove();
       };
-      
-      const url = URL.createObjectURL(data.image);
-      setImageUrl(url); 
-      image.src = url;
     }
-    // クリーンアップ関数
-    return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
-        setImageUrl(null);
-      }
+    // クリーンアップ関数: URLを解放し、メモリリークを防ぐ
+    return () => { 
+      if (urlToRevoke) { 
+        URL.revokeObjectURL(urlToRevoke); 
+        setImageUrl(null); 
+      } 
     };
   }, [data.image, extractColors]);
 
@@ -137,6 +145,8 @@ const ColorExtractor: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       setData({ image: file, colors: null });
+      // input要素の値をリセットし、同じファイルを再度選択できるようにする
+      event.target.value = ''; 
     }
   };
 
@@ -160,41 +170,7 @@ const ColorExtractor: React.FC = () => {
         </div>
       )}
 
-      {(imageUrl && !loading) && (
-        <div className="flex flex-col items-center gap-6 w-full">
-          {/* 魚のSVGを描画 */}
-          {data.colors && data.colors.length >= 3 ? (
-            <div className="w-full max-w-md bg-zinc-100 p-4 rounded-xl shadow-xl border border-gray-200">
-              <h2 className="text-2xl font-extrabold mb-4 text-center text-gray-800">
-                🎨 カラーリング結果
-              </h2>
-              <FishSVG colors={data.colors} />
-              
-              {/* 抽出された色を表示 */}
-              <div className="flex justify-center gap-4 mt-6">
-                {data.colors.map((color, index) => (
-                  <div key={index} className="flex flex-col items-center">
-                    <div 
-                      className="w-12 h-12 rounded-full border-4 border-white shadow-lg transition-transform hover:scale-105"
-                      style={{ backgroundColor: toRgbString(color) }}
-                      title={`R:${color.r}, G:${color.g}, B:${color.b}`}
-                    ></div>
-                    <small className="text-sm mt-2 font-medium text-gray-600">色 {index + 1}</small>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="w-full max-w-md text-center p-6 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-yellow-800">色抽出に問題が発生しました。別の画像を試してください。</p>
-            </div>
-          )}
-
-          {/* 元画像プレビュー */}
-          <h2 className="text-xl font-bold mt-8 text-gray-700">📸 元画像プレビュー</h2>
-          <img src={imageUrl} alt="Uploaded for color extraction" className="max-w-xs h-auto rounded-lg shadow-xl border border-gray-300" />
-        </div>
-      )}
+      {/* ColorExtractor 自身は画像プレビューを表示しない (Aquariumに統合) */}
     </div>
   );
 };
