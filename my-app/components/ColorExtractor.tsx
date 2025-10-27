@@ -1,28 +1,12 @@
-'use client'; 
-// ★必須: クライアントコンポーネントとして実行★
+// components/ColorExtractor.tsx
+'use client';
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import Aquarium from './Aquarium'; // ★追加: Aquariumコンポーネントをインポート★
-import { RGBColor } from './FishSVG'; // ★追加: RGBColor型をインポート★
+import { RGBColor } from './FishSVG'; 
 
-// RGBオブジェクトをCSSのrgb()文字列に変換するヘルパー関数 (再定義)
-// ColorExtractor内での色プレビュー表示に必要
-const toRgbString = (color: RGBColor): string => 
-  `rgb(${color.r}, ${color.g}, ${color.b})`;
-
-// ImageColorData型（外部ファイルからインポートがないため、ここで定義）
-export type ImageColorData = {
-  image: Blob | null;
-  colors: RGBColor[] | null;
-}
-
-// =======================================================
-// ★色抽出のためのヘルパー関数 (前の回答から再利用)★
 // K-means法などに使う距離関数（ユークリッド距離の二乗）
 const abs = (color1: number[], color2: number[]): number =>
-  (color1[0] - color2[0]) ** 2 +
-  (color1[1] - color2[1]) ** 2 +
-  (color1[2] - color2[2]) ** 2;
+  (color1[0] - color2[0]) ** 2 + (color1[1] - color2[1]) ** 2 + (color1[2] - color2[2]) ** 2;
 
 // RGBをHSVに変換し、明るさ＋彩度を返す関数（ソート用）
 const getHsvScore = (r: number, g: number, b: number): number => {
@@ -31,84 +15,130 @@ const getHsvScore = (r: number, g: number, b: number): number => {
     s = v ? d / v : 0;
   return (v / 255) + s;
 };
-// =======================================================
 
-const ColorExtractor: React.FC = () => {
-  // ★状態定義の補完★
+export type ImageColorData = { image: Blob | null; colors: RGBColor[] | null; }
+
+interface ColorExtractorProps { 
+  // ★修正: 抽出した色と元の画像URLを親に渡す
+  onExtractColors: (colors: RGBColor[], originalImageUrl: string | null) => void; 
+}
+
+const ColorExtractor: React.FC<ColorExtractorProps> = ({ onExtractColors }) => {
   const [data, setData] = useState<ImageColorData>({ image: null, colors: null });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   
-  // 魚の描画準備ができたかどうかを判定するフラグ
-  const isReady = data.colors !== null && data.colors.length >= 3 && !loading;
-
-  // =======================================================
-  // ★色抽出ロジック (useCallbackで定義) の補完★
-  const extractColors = useCallback(async (src: ImageData) => {
+  const extractColors = useCallback(async (src: ImageData, currentImageUrl: string | null) => { 
     setLoading(true);
-    // ... (前の回答で定義されたK-meansロジック全体をここに配置) ...
-    
-    // サンプリングとK-meansのロジック（簡略化してコメントアウト）
-    /*
-    const pixels = []; // ... (ピクセルデータ取得ロジック)
-    let chosenPixels: number[][] = []; // ... (K-means初期化と反復処理)
-    */
-    
-    // エラー防止のため、仮の色のロジックを配置
-    const finalColors: RGBColor[] = [
-      { r: 255, g: 100, b: 100 }, // Dummy Color 1
-      { r: 100, g: 255, b: 100 }, // Dummy Color 2
-      { r: 100, g: 100, b: 255 }, // Dummy Color 3
-    ];
-    // ★実際のK-meansロジックの補完は前の回答を参照してください★
+    const pixels: number[][] = [];
+    // 4ピクセルごとのサンプリングでピクセルデータを収集
+    for (let x = 0; x < src.width; x += 4) {
+      for (let y = 0; y < src.height; y += 4) {
+        const i = (y * src.width + x) * 4;
+        pixels.push([src.data[i + 0], src.data[i + 1], src.data[i + 2]]);
+      }
+    }
 
-    setData(prev => ({ ...prev, colors: finalColors }));
+    // K-means初期化
+    let chosenPixels: number[][] = [];
+    const candidates = [...pixels];
+    for (let i = 0; i < 12 && candidates.length > 0; i++) {
+      const arrayIndex = Math.floor(Math.random() * candidates.length);
+      chosenPixels.push(candidates[arrayIndex]);
+      candidates.splice(arrayIndex, 1);
+    }
+
+    // K-means法の反復処理 (100回)
+    for (let loop = 0; loop < 100; loop++) {
+      // 1. 各ピクセルを最も近いセントロイドに割り当て
+      const groupIndexes: number[] = []; 
+      for (const pixel of pixels) {
+        const distances = [];
+        for (const chosenPixel of chosenPixels) {
+          distances.push(abs(pixel, chosenPixel));
+        }
+        groupIndexes.push(distances.indexOf(Math.min(...distances)));
+      }
+
+      // 2. 新しいセントロイドの計算 (0除算回避ロジック)
+      let newChosenPixels: number[][] = [...Array(chosenPixels.length)].map((_) => [0, 0, 0]);
+      let assignedCount: number[] = [...Array(chosenPixels.length)].fill(0);
+
+      for (let i = 0; i < pixels.length; i++) {
+        const groupIndex = groupIndexes[i]; 
+        
+        newChosenPixels[groupIndex][0] += pixels[i][0];
+        newChosenPixels[groupIndex][1] += pixels[i][1];
+        newChosenPixels[groupIndex][2] += pixels[i][2];
+        assignedCount[groupIndex]++;
+      }
+      
+      let nextChosenPixels: number[][] = [];
+
+      for (let i = 0; i < chosenPixels.length; i++) {
+        if (assignedCount[i] > 0) {
+          // 割り当てがあった場合: 平均を計算
+          const newR = newChosenPixels[i][0] / assignedCount[i];
+          const newG = newChosenPixels[i][1] / assignedCount[i];
+          const newB = newChosenPixels[i][2] / assignedCount[i];
+          nextChosenPixels.push([newR, newG, newB]);
+        } else {
+          // 割り当てがなかった場合: 前回のセントロイドを維持
+          nextChosenPixels.push(chosenPixels[i]);
+        }
+      }
+      chosenPixels = nextChosenPixels;
+    }
+
+    const finalColors: RGBColor[] = chosenPixels 
+      .filter(color => color.every(c => !isNaN(c))) 
+      .sort((a, b) => getHsvScore(b[0], b[1], b[2]) - getHsvScore(a[0], a[1], a[2]))
+      .slice(0, 3)
+      .map((color) => ({ r: Math.round(color[0]), g: Math.round(color[1]), b: Math.round(color[2]), }));
+      
+    if (finalColors.length >= 3) {
+      onExtractColors(finalColors, currentImageUrl); 
+    }
+
     setLoading(false);
-  }, []);
+    setData({ image: null, colors: null }); 
+  }, [onExtractColors]);
 
-  // =======================================================
-  // ★画像処理とuseEffectの補完★
   useEffect(() => {
+    let urlToRevoke: string | null = null;
     if (data.image) {
-      // BlobからImageDataを取得するロジック（Canvasを使用）
       const image = document.createElement('img');
+      urlToRevoke = URL.createObjectURL(data.image);
+      setImageUrl(urlToRevoke); 
+      image.src = urlToRevoke;
       image.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = image.width;
         canvas.height = image.height;
         const context = canvas.getContext('2d');
-        if (!context) return;
-
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        extractColors(context.getImageData(0, 0, canvas.width, canvas.height));
+        if (!context) { console.error('Canvas context not available.'); return; }
+        extractColors(context.getImageData(0, 0, canvas.width, canvas.height), urlToRevoke); 
         canvas.remove();
       };
-      
-      const url = URL.createObjectURL(data.image);
-      setImageUrl(url); 
-      image.src = url;
     }
-    return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
-        setImageUrl(null);
-      }
+    return () => { 
+      if (urlToRevoke) { 
+        URL.revokeObjectURL(urlToRevoke); 
+        setImageUrl(null); 
+      } 
     };
-  }, [data.image, extractColors, imageUrl]);
+  }, [data.image, extractColors]);
 
-  // =======================================================
-  // ★ファイル入力ハンドラーの補完★
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setData({ image: file, colors: null });
+      event.target.value = ''; 
     }
   };
-  // =======================================================
 
   return (
     <div className="flex flex-col items-center gap-8 p-4 w-full">
-      {/* ファイルアップロードの input */}
       <input 
         type="file" 
         accept="image/*" 
@@ -120,45 +150,14 @@ const ColorExtractor: React.FC = () => {
           file:bg-indigo-100 file:text-indigo-700
           hover:file:bg-indigo-200 cursor-pointer"
       />
-
-      {/* ローディング表示 */}
+      
       {loading && (
         <div className="text-lg text-indigo-600 animate-pulse">
           画像を解析中...少々お待ちください 🐟
         </div>
       )}
-
-      {/* 魚の描画エリアを Aquarium に置き換え */}
-      <div className="w-full max-w-3xl">
-          <Aquarium 
-              fishColors={data.colors || []} 
-              isReady={isReady} 
-          />
-      </div>
-
-      {/* 抽出された色を表示するパネル */}
-      {isReady && (
-        <div className="w-full max-w-md p-4 bg-zinc-100 rounded-xl shadow-xl border border-gray-200">
-          <h2 className="text-xl font-bold mb-2 text-center">🎨 抽出された色</h2>
-          <div className="flex justify-center gap-4 mt-2">
-            {data.colors!.map((color, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div 
-                  className="w-8 h-8 rounded-full border border-gray-300"
-                  style={{ backgroundColor: toRgbString(color) }}
-                ></div>
-                <small className="text-xs mt-1">色 {index + 1}</small>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       
-      {/* 元画像プレビュー */}
-      {(imageUrl && !loading) && (
-        <img src={imageUrl} alt="Uploaded for color extraction" className="max-w-xs h-auto rounded-lg shadow-xl" />
-      )}
-      
+      {/* 元画像プレビューは Aquarium の確認画面に統合されているため、ここでは表示しない */}
     </div>
   );
 };
