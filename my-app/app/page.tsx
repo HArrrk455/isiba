@@ -1,24 +1,29 @@
-import React from "react";
-// Image コンポーネントはもう使わないため削除
-// import Image from "next/image"; 
+import Link from 'next/link';
 
-// 作成したクライアントコンポーネントをインポート
-import ColorExtractor from "@/components/ColorExtractor";
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      {/* 既存のレイアウトを維持しつつ、メインコンテンツを ColorExtractor に置き換える */}
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-start py-16 px-4 sm:px-16 bg-white dark:bg-black">
-
-        {/* ★ここに ColorExtractor コンポーネントを配置★ */}
-        <ColorExtractor />
-
-        {/* 既存のフッターやリンクは必要に応じて残すか削除してください */}
-        <div className="mt-auto pt-16 flex flex-col gap-4 text-base font-medium sm:flex-row">
-          {/* ... 既存の Vercel/Docs リンクなど ... */}
-        </div>
-      </main>
-    </div>
+    <main style={{ 
+      padding: 40, 
+      fontFamily: 'sans-serif', 
+      textAlign: 'center', 
+      minHeight: '100vh',
+      backgroundColor: '#191945',
+      color: 'white'
+    }}>
+      <h1 style={{ marginTop: '50px' }}>Welcome to isiba Diary App</h1>
+      <p style={{ marginBottom: '30px' }}>機能を選んでください。</p>
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        <li style={{ marginBottom: '15px' }}>
+          <Link href="/diary" style={{ color: '#A0A0FF', textDecoration: 'underline' }}>
+            ➡️ ✍️ 日記入力ページへ
+          </Link>
+        </li>
+        <li>
+          <Link href="/diary/view" style={{ color: '#A0A0FF', textDecoration: 'underline' }}>
+            ➡️ 👀 日記表示ページへ
+          </Link>
+        </li>
+      </ul>
+    </main>
   );
 }
