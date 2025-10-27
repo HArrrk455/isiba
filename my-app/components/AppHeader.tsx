@@ -11,8 +11,8 @@ const AppHeader: React.FC = () => {
   let links = [];
 
   if (pathname.includes('/diary/view')) {
-    links.push({ href: '/diary', label: '✍️ 入力画面へ' });
-    links.push({ href: '/', label: '🏠 ホームへ' });
+    links.push({ href: '/diary/entry', label: '✍️ 入力画面へ' });
+    links.push({ href: '/diary', label: '🏠 ホームへ' });
   } else if (pathname.includes('/diary')) {
     links.push({ href: '/diary/view', label: '👀 表示画面へ' });
     links.push({ href: '/', label: '🏠 ホームへ' });
