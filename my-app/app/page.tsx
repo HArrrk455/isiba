@@ -11,10 +11,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-start py-16 px-4 sm:px-16 bg-white dark:bg-black">
-        <h1 className="text-4xl font-bold mb-10 text-black dark:text-zinc-50">
-          写真から色を抽出して魚に反映
-        </h1>
-        
+
         {/* ★ここに Aquarium コンポーネントを配置★ */}
         <Aquarium />
 
