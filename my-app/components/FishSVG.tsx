@@ -16,11 +16,15 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
   const gradColor2 = colors[1] ? toRgbString(colors[1]) : 'rgb(50, 200, 100)'; // 胴体の色 (ヒレの単色も兼ねる)
   const gradColor3 = colors[2] ? toRgbString(colors[2]) : 'rgb(255, 150, 0)';  // 尾びれの色
 
-  // 1. 魚の胴体（尾びれの付け根まで）
-  const bodyPath = `
+  // ★新しいシンプルな魚のシルエットパスデータ★
+  // M 始点, C 制御点1, 制御点2, 終点
+  const fish1 = `
     M 10 50 
-    C 30 20, 120 20, 140 50 
-    C 120 80, 30 80, 10 50 Z
+    C 80 -10, 150 40, 150 50     
+    C 95 100, 50 80, 10 50       
+    M 130 50 
+    C 145 60, 215 -40, 170 50 
+    C 170 60, 205 120, 140 50 Z
   `;
   
   // 2. 尾びれ（三角形）
@@ -72,10 +76,11 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
 
       {/* 2. 尾びれ（尾びれ用グラデーション適用） */}
       <path 
-        fill="url(#tailFinGradient)" // 尾びれグラデーションを適用
-        stroke="black"
-        strokeWidth="2" 
-        d={tailFinPath}
+        fill="url(#fishGradient)" // グラデーションを適用
+        stroke="none"
+        strokeWidth="2" // シンプルな viewBox に合わせて線の太さも細くします
+        d={fish1}
+        id="fish-silhouette"
       />
     
     </svg>
