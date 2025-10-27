@@ -7,7 +7,7 @@ interface FishSVGProps {
   colors: RGBColor[];
 }
 
-const toRgbString = (color: RGBColor): string => 
+const toRgbString = (color: RGBColor): string =>
   `rgb(${color.r}, ${color.g}, ${color.b})`;
 
 const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
@@ -26,7 +26,7 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
     C 145 60, 215 -40, 170 50 
     C 170 60, 205 120, 140 50 Z
   `;
-  
+
   // 2. 尾びれ（三角形）
   const tailFinPath = `
     M 140 50
@@ -36,20 +36,20 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
     Z
   `;
 
- 
+
 
   // パスデータに合わせて viewBox を設定
   const viewBox = "0 0 200 100";
 
 
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox={viewBox} 
-      width="100%" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width="100%"
       height="auto"
       className="max-w-xs md:max-w-md"
-      style={{ overflow: 'visible' }} 
+      style={{ overflow: 'visible' }}
     >
       <defs>
         {/* 線形グラデーションの定義: 左から右へ色を変化させる (胴体用) */}
@@ -58,31 +58,31 @@ const FishSVG: React.FC<FishSVGProps> = ({ colors }) => {
           <stop offset="0%" style={{ stopColor: gradColor1, stopOpacity: 1 }} />
           <stop offset="100%" style={{ stopColor: gradColor2, stopOpacity: 1 }} />
         </linearGradient>
-        
+
         {/* 尾びれ用のグラデーション (Color 2 と Color 3 の間で変化させる) */}
         <linearGradient id="tailFinGradient" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" style={{ stopColor: gradColor2, stopOpacity: 1 }} />
           <stop offset="100%" style={{ stopColor: gradColor3, stopOpacity: 1 }} />
         </linearGradient>
       </defs>
-      
+
       {/* 1. 胴体（グラデーション適用） */}
-      <path 
+      <path
         fill="url(#fishBodyGradient)" // 胴体グラデーションを適用
         stroke="black"
-        strokeWidth="2" 
-        d={bodyPath}
+        strokeWidth="2"
+        d={fish1}
       />
 
       {/* 2. 尾びれ（尾びれ用グラデーション適用） */}
-      <path 
+      <path
         fill="url(#fishGradient)" // グラデーションを適用
         stroke="none"
         strokeWidth="2" // シンプルな viewBox に合わせて線の太さも細くします
         d={fish1}
         id="fish-silhouette"
       />
-    
+
     </svg>
   );
 };
