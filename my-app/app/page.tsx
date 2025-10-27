@@ -14,7 +14,7 @@ export default function HomePage() {
       <p style={{ marginBottom: '30px' }}>機能を選んでください。</p>
       <ul style={{ listStyle: 'none', padding: 0 }}>
         <li style={{ marginBottom: '15px' }}>
-          <Link href="/diary" style={{ color: '#A0A0FF', textDecoration: 'underline' }}>
+          <Link href="/diary/entry" style={{ color: '#A0A0FF', textDecoration: 'underline' }}>
             ➡️ ✍️ 日記入力ページへ
           </Link>
         </li>
